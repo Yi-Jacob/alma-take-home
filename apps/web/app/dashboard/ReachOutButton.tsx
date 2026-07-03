@@ -36,6 +36,8 @@ export function ReachOutButton({ id }: { id: string | number }) {
           type="button"
           onClick={handleClick}
           disabled={pending}
+          title="Mark once you've emailed or called this prospect"
+          aria-describedby={`reach-out-help-${id}`}
           className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
             confirming
               ? "border-brass bg-brass-050 text-amber-900 hover:bg-brass/20"
@@ -59,6 +61,12 @@ export function ReachOutButton({ id }: { id: string | number }) {
           </button>
         )}
       </div>
+      <span
+        id={`reach-out-help-${id}`}
+        className="max-w-[11rem] text-right text-[10px] leading-snug text-muted"
+      >
+        Use after your first email or call
+      </span>
       {error && (
         <span role="alert" className="text-right text-xs text-status-amber-fg">
           {error}

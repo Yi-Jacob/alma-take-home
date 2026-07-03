@@ -16,6 +16,7 @@ before commit.
 | Frontend (form, login BFF, dashboard, middleware) | Frontend subagent → human-reviewed | httpOnly cookie set server-side; token never exposed to client JS |
 | Infra (`docker-compose.yml`, `.env.example`, `.gitignore`) | Infra/docs subagent → human-reviewed | Zero-setup `docker compose up` |
 | Docs (README, RUN_LOCAL, DESIGN, AGENT_USAGE, prompt-logs, this file) | Infra/docs subagent → human-reviewed | Adapted from the research templates against the real code |
+| Audit hardening + product polish | Cursor agents → human-reviewed | Commits `6d759bd`–`3a20c92`; see `docs/AUDIT_HANDOFF.md` |
 | Integration + end-to-end verification | **Manual** | Running the stack and confirming the demo flow |
 
 ## Commit conventions

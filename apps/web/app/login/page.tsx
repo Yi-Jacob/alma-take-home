@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Wordmark } from "@/components/Wordmark";
@@ -123,6 +124,13 @@ export default function LoginPage() {
             <span className="font-mono">attorney@example.com</span> /{" "}
             <span className="font-mono">password123</span>
           </div>
+
+          <Link
+            href="/"
+            className="mt-6 inline-flex text-sm font-medium text-pine underline-offset-4 hover:underline"
+          >
+            ← Back to case assessment
+          </Link>
         </div>
       </main>
     </div>

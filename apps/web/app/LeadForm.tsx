@@ -10,12 +10,19 @@ type FormState =
   | { status: "error"; message: string };
 
 const ACCEPT = ".pdf,.doc,.docx";
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 const EMAIL_PATTERN = /.+@.+\..+/;
 
 type FieldErrors = Partial<
   Record<"first_name" | "last_name" | "email", string>
 >;
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function validateFields(data: FormData): FieldErrors {
   const errors: FieldErrors = {};
@@ -37,26 +44,75 @@ function validateFields(data: FormData): FieldErrors {
   return errors;
 }
 
-function extractError(detail: unknown): string {
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail) && detail.length > 0) {
-    const messages = detail
-      .map((item) => {
-        const { loc, msg } = item as { loc?: unknown[]; msg?: string };
-        if (!msg) return null;
-        const field = Array.isArray(loc) ? loc[loc.length - 1] : null;
-        return field ? `${field}: ${msg}` : msg;
-      })
-      .filter((message): message is string => message !== null);
-    if (messages.length > 0) return messages.join("; ");
+function friendlyResumeMessage(msg: string): string {
+  const lower = msg.toLowerCase();
+  if (lower.includes("10") || lower.includes("size") || lower.includes("large")) {
+    return "Resume must be 10 MB or smaller.";
   }
-  return "Something went wrong. Please check your details and try again.";
+  if (lower.includes("type") || lower.includes("content") || lower.includes("allowed")) {
+    return "Please upload a PDF, DOC, or DOCX file.";
+  }
+  if (lower.includes("empty")) {
+    return "Attach your resume to continue.";
+  }
+  return "Please check your resume file and try again.";
+}
+
+function parseApiError(
+  detail: unknown,
+): { resume?: string; form?: string } {
+  if (typeof detail === "string") {
+    return { form: detail };
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    let resume: string | undefined;
+    const other: string[] = [];
+
+    for (const item of detail) {
+      const { loc, msg } = item as { loc?: unknown[]; msg?: string };
+      if (!msg) continue;
+      const field = Array.isArray(loc) ? String(loc[loc.length - 1]) : null;
+      if (field === "resume") {
+        resume = friendlyResumeMessage(msg);
+      } else if (field === "email") {
+        other.push("Please enter a valid email address.");
+      } else if (field === "first_name") {
+        other.push("Please enter your first name.");
+      } else if (field === "last_name") {
+        other.push("Please enter your last name.");
+      } else {
+        other.push(msg);
+      }
+    }
+
+    return {
+      resume,
+      form: other.length > 0 ? other.join(" ") : undefined,
+    };
+  }
+  return {
+    form: "Something went wrong. Please check your details and try again.",
+  };
+}
+
+function validateResume(file: File | null): string | null {
+  if (!file || file.size === 0) {
+    return "Attach your resume to continue.";
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    return "Resume must be 10 MB or smaller.";
+  }
+  return null;
 }
 
 export function LeadForm() {
   const [state, setState] = useState<FormState>({ status: "idle" });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{
+    name: string;
+    size: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function clearFieldError(name: keyof FieldErrors) {
@@ -64,6 +120,17 @@ export function LeadForm() {
       if (!previous[name]) return previous;
       return { ...previous, [name]: undefined };
     });
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) {
+      setSelectedFile(null);
+      setResumeError(null);
+      return;
+    }
+    setSelectedFile({ name: file.name, size: file.size });
+    setResumeError(validateResume(file));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -79,17 +146,13 @@ export function LeadForm() {
     setFieldErrors({});
 
     const resume = data.get("resume");
-    if (!(resume instanceof File) || resume.size === 0) {
-      setState({ status: "error", message: "Attach your resume to continue." });
+    const resumeValidation =
+      resume instanceof File ? validateResume(resume) : "Attach your resume to continue.";
+    if (resumeValidation) {
+      setResumeError(resumeValidation);
       return;
     }
-    if (resume.size > 10 * 1024 * 1024) {
-      setState({
-        status: "error",
-        message: "Resume must be 10 MB or smaller.",
-      });
-      return;
-    }
+    setResumeError(null);
 
     setState({ status: "submitting" });
 
@@ -100,14 +163,23 @@ export function LeadForm() {
       });
 
       if (!response.ok) {
-        let message = "We couldn't submit your request. Please try again.";
+        let formMessage = "We couldn't submit your request. Please try again.";
         try {
           const body = await response.json();
-          message = extractError(body?.detail ?? body);
+          const parsed = parseApiError(body?.detail ?? body);
+          if (parsed.resume) {
+            setResumeError(parsed.resume);
+          }
+          if (parsed.form) {
+            formMessage = parsed.form;
+          } else if (parsed.resume && !parsed.form) {
+            setState({ status: "idle" });
+            return;
+          }
         } catch {
           /* keep default message */
         }
-        setState({ status: "error", message });
+        setState({ status: "error", message: formMessage });
         return;
       }
 
@@ -115,7 +187,9 @@ export function LeadForm() {
         status: "success",
         email: String(data.get("email") ?? "").trim(),
       });
-      setFileName(null);
+      setSelectedFile(null);
+      setResumeError(null);
+      form.reset();
     } catch {
       setState({
         status: "error",
@@ -145,7 +219,7 @@ export function LeadForm() {
           </svg>
         </div>
         <h2 className="font-display text-2xl font-semibold text-pine">
-          Thanks — we received your application
+          Thanks — we received your assessment request
         </h2>
         <p className="mt-3 text-[15px] leading-relaxed text-muted">
           We&apos;ll write to you at{" "}
@@ -168,6 +242,7 @@ export function LeadForm() {
   }
 
   const submitting = state.status === "submitting";
+  const resumeErrorId = "resume-error";
 
   return (
     <form
@@ -214,32 +289,60 @@ export function LeadForm() {
       </div>
 
       <div className="mt-4">
-        <label className="mb-1.5 block text-sm font-medium text-ink">
+        <span className="mb-1.5 block text-sm font-medium text-ink">
           Resume or CV
-        </label>
+        </span>
         <label
-          className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed border-sage-strong bg-paper px-4 py-3.5 text-sm transition-colors hover:border-pine hover:bg-pine-050/50"
-          data-has-file={fileName ? "true" : "false"}
+          className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed bg-paper px-4 py-3.5 text-sm transition-colors hover:border-pine hover:bg-pine-050/50 ${
+            resumeError ? "border-status-amber-fg" : "border-sage-strong"
+          } ${selectedFile && !resumeError ? "border-pine bg-pine-050/30" : ""}`}
         >
-          <span className="flex items-center gap-3 truncate">
+          <span className="flex min-w-0 items-center gap-3">
             <span
               aria-hidden
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brass-050 text-brass"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                selectedFile && !resumeError
+                  ? "bg-status-green-bg text-status-green-fg"
+                  : "bg-brass-050 text-brass"
+              }`}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M14 3v5h5M14 3l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7Z"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              {selectedFile && !resumeError ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M20 6 9 17l-5-5"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M14 3v5h5M14 3l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7Z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
             </span>
-            <span className="truncate text-ink">
-              {fileName ?? "Choose a file"}
-              <span className="ml-1 block text-xs text-muted sm:inline">
-                PDF, DOC or DOCX. Max 10 MB.
-              </span>
+            <span className="min-w-0 truncate text-ink">
+              {selectedFile ? (
+                <>
+                  <span className="block truncate font-medium">{selectedFile.name}</span>
+                  <span className="block text-xs text-muted">
+                    {formatFileSize(selectedFile.size)} · Ready to submit
+                  </span>
+                </>
+              ) : (
+                <>
+                  Choose a file
+                  <span className="ml-1 block text-xs text-muted sm:inline">
+                    PDF, DOC or DOCX. Max 10 MB.
+                  </span>
+                </>
+              )}
             </span>
           </span>
           <span className="shrink-0 rounded-lg border border-sage-strong bg-white px-3 py-1.5 text-xs font-medium text-pine">
@@ -251,12 +354,17 @@ export function LeadForm() {
             name="resume"
             accept={ACCEPT}
             required
+            aria-invalid={resumeError ? true : undefined}
+            aria-describedby={resumeError ? resumeErrorId : undefined}
             className="sr-only"
-            onChange={(e) =>
-              setFileName(e.currentTarget.files?.[0]?.name ?? null)
-            }
+            onChange={handleFileChange}
           />
         </label>
+        {resumeError && (
+          <p id={resumeErrorId} className="mt-1.5 text-xs text-status-amber-fg">
+            {resumeError}
+          </p>
+        )}
       </div>
 
       {state.status === "error" && (

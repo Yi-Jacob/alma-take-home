@@ -9,7 +9,7 @@ import { LogoutButton } from "./LogoutButton";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Leads · Meridian" };
+export const metadata = { title: "Case assessments · Meridian" };
 
 const STATE_ORDER: Record<LeadRead["state"], number> = {
   PENDING: 0,
@@ -73,11 +73,15 @@ export default async function DashboardPage() {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+          <div className="max-w-xl">
             <p className="eyebrow">Attorney portal</p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-pine">
-              Leads
+              Case assessments
             </h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Review pending requests, contact each prospect, then mark them once
+              you&apos;ve reached out.
+            </p>
           </div>
           <div className="flex items-center gap-5 text-sm">
             <Stat label="Total" value={leads.length} />
@@ -90,7 +94,7 @@ export default async function DashboardPage() {
           {leads.length === 0 ? (
             <div className="px-6 py-20 text-center">
               <h2 className="font-display text-xl font-semibold text-pine">
-                No leads yet
+                No assessments yet
               </h2>
               <p className="mt-2 text-sm text-muted">
                 New case assessments will appear here as they come in.
@@ -98,13 +102,14 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse text-sm">
+              <table className="w-full min-w-[820px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-sage bg-paper-2 text-left">
                     <Th>Name</Th>
                     <Th>Email</Th>
                     <Th>Resume</Th>
                     <Th>Status</Th>
+                    <Th>Confirmation</Th>
                     <Th>Submitted</Th>
                     <Th className="text-right">Action</Th>
                   </tr>
@@ -113,7 +118,11 @@ export default async function DashboardPage() {
                   {leads.map((lead) => (
                     <tr
                       key={lead.id}
-                      className="border-b border-sage/60 last:border-0 hover:bg-paper/60"
+                      className={`border-b border-sage/60 last:border-0 hover:bg-paper/60 ${
+                        lead.state === "PENDING"
+                          ? "border-l-2 border-l-brass bg-status-amber-bg/25"
+                          : ""
+                      }`}
                     >
                       <td className="px-5 py-4 font-medium text-ink">
                         {lead.first_name} {lead.last_name}
@@ -158,6 +167,9 @@ export default async function DashboardPage() {
                       <td className="px-5 py-4">
                         <StatusBadge state={lead.state} />
                       </td>
+                      <td className="px-5 py-4">
+                        <ConfirmationStatus sentAt={lead.notification_sent_at} />
+                      </td>
                       <td className="px-5 py-4 font-mono text-xs text-muted">
                         {formatDate(lead.created_at)}
                       </td>
@@ -186,6 +198,24 @@ export default async function DashboardPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+function ConfirmationStatus({ sentAt }: { sentAt: string | null }) {
+  if (sentAt) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-status-green-fg">
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-status-green-fg" />
+        Sent
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-status-amber-fg">
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-status-amber-fg" />
+      Not confirmed
+    </span>
   );
 }
 

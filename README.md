@@ -51,7 +51,7 @@ password: password123
    ```
    (The default `console` email backend logs both messages to stdout.)
 3. Log in with the seeded attorney credentials.
-4. On the dashboard, open the resume and mark the lead **REACHED_OUT**.
+4. On the dashboard, open the resume and mark the lead **Reached out**.
 
 ## Docs
 
@@ -60,3 +60,4 @@ password: password123
 - [AI tooling usage](docs/AGENT_USAGE.md) — how agents were used
 - [Prompt logs](docs/prompt-logs.md) — representative prompt excerpts
 - [Attribution notes](NOTES.md) — hand-written vs agent-generated
+- [Audit handoff](docs/AUDIT_HANDOFF.md) — optional reviewer context (architecture, verify steps, intentional trade-offs)
