@@ -49,17 +49,21 @@ schema predated the field, and the subagent's `to_read()` serializer faithfully
 mirrored that schema instead of the model, so the field never left the API.
 Every individual piece looked right; only comparing the real HTTP response
 against the documented contract exposed it. Fixed by adding the field to the
-schema and serializer; the test suite (16 tests) stayed green and the field now
-returns a real timestamp.
+schema and serializer; the test suite stayed green and the field now returns a
+real timestamp.
 
-Two smaller catches worth noting: `docker compose up` failed because the
-compose file published Postgres on host port 5432, which collided with a
-Postgres already running on this machine — fixed by making the host port
-configurable (`POSTGRES_HOST_PORT`, default 5433) and updating the docs to
-match. And the research-template docs proposed a non-httpOnly auth cookie "so
-middleware can read it"; middleware only needs presence, which httpOnly cookies
-satisfy, so the frontend was directed to use httpOnly and the design doc
-corrected.
+## Post-build audit (Cursor)
+
+After the initial build, three parallel audit agents (backend, frontend, infra)
+reviewed the repo. All Blocker/High findings were fixed: 413 pre-read upload
+guard, `with_for_update` on state transitions, storage path traversal rejection,
+cookie/JWT TTL alignment, dashboard error boundary, and client-side upload
+limits. Twenty additional tests were added (36 total). Intentional trade-offs
+are listed in [AUDIT_HANDOFF.md](AUDIT_HANDOFF.md).
+
+A follow-up product pass aligned terminology across the UI and emails
+("assessment request" not "application"), improved resume upload feedback,
+and clarified the attorney workflow on the dashboard.
 
 ## Prompt logs
 
