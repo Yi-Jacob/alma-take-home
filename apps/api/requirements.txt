@@ -1,0 +1,14 @@
+# Mirrors the runtime dependencies declared in pyproject.toml.
+# `pip install .` is preferred, but this file is provided for compose builds
+# that expect a requirements.txt.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+psycopg[binary]>=3.2
+pydantic>=2.7
+pydantic-settings>=2.3
+python-multipart>=0.0.9
+passlib[bcrypt]>=1.7
+bcrypt<4.1
+pyjwt>=2.8
+email-validator>=2.1
