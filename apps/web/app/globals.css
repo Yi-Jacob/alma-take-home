@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f6f5f1;
+  --color-paper-2: #efeee7;
+  --color-ink: #191a17;
+  --color-pine: #123528;
+  --color-pine-600: #1b4a38;
+  --color-pine-050: #e7ede9;
+  --color-brass: #b08544;
+  --color-brass-050: #f3ead9;
+  --color-sage: #dcdfd4;
+  --color-sage-strong: #c7ccbc;
+  --color-muted: #6b7166;
+
+  --color-status-amber-bg: #fbf1dc;
+  --color-status-amber-fg: #8a6414;
+  --color-status-green-bg: #e3efe6;
+  --color-status-green-fg: #216040;
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-paper);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-pine);
+  color: var(--color-paper);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-brass);
+}
+
+:where(a, button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-pine);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
