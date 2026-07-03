@@ -1,0 +1,72 @@
+# Lead-management stack: Postgres + FastAPI API + Next.js web.
+#
+# One command to run everything:
+#     docker compose up
+#
+# Every value below has a safe local default, so the stack comes up with zero
+# setup. Override any of them by copying .env.example to .env (Compose loads it
+# automatically) or by exporting the variable in your shell.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-alma}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-alma}
+      POSTGRES_DB: ${POSTGRES_DB:-alma}
+    ports:
+      # Host port is configurable to avoid clashing with a local Postgres.
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      # The API waits for this to pass before it starts (depends_on below).
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-alma} -d ${POSTGRES_DB:-alma}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./apps/api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Uses the psycopg (v3) sync driver, matching the app's SQLAlchemy engine.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-alma}:${POSTGRES_PASSWORD:-alma}@db:5432/${POSTGRES_DB:-alma}
+      # Public base URL used to build resume download links returned to clients.
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+      # CORS origin the browser calls the API from.
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      # console -> both emails are logged to this container's stdout.
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-console}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
+      ATTORNEY_NOTIFY_EMAIL: ${ATTORNEY_NOTIFY_EMAIL:-attorney@example.com}
+      # CHANGE THIS in any non-local environment.
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      # Seeded attorney login (created on startup if missing).
+      ATTORNEY_EMAIL: ${ATTORNEY_EMAIL:-attorney@example.com}
+      ATTORNEY_PASSWORD: ${ATTORNEY_PASSWORD:-password123}
+      # Resumes are written here; the named volume keeps them across restarts.
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - "8000:8000"
+    volumes:
+      - api_uploads:/data/uploads
+
+  web:
+    build: ./apps/web
+    depends_on:
+      - api
+    environment:
+      # Base URL the browser uses (client-side fetches, resume links).
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      # Base URL the Next.js server uses to reach the API inside the network
+      # (BFF login route + dashboard server component). Uses the service name.
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8000}
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
+  api_uploads:
