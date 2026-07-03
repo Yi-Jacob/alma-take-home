@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://alma:alma@localhost:5432/alma"
 
     # Auth / JWT
-    jwt_secret: str = "dev-secret-change-me"
+    # 32+ bytes so HS256 meets RFC 7518's minimum key length even in dev.
+    jwt_secret: str = "dev-only-secret-change-me-in-production!"
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = 60 * 8
 

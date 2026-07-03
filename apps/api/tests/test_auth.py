@@ -35,7 +35,7 @@ def test_garbage_token_returns_401(client):
 
 def test_token_signed_with_wrong_secret_returns_401(client):
     forged_token = jwt.encode(
-        {"sub": "attorney@example.com"}, "wrong-secret", algorithm="HS256"
+        {"sub": "attorney@example.com"}, "a-different-32-byte-signing-secret!!", algorithm="HS256"
     )
     response = client.get(
         "/api/v1/leads",

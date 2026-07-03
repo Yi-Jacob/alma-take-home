@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,9 +12,21 @@ from app.seed import seed_attorney
 logging.basicConfig(level=logging.INFO)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create tables and seed the attorney user on startup."""
+    Base.metadata.create_all(engine)
+    db = SessionLocal()
+    try:
+        seed_attorney(db)
+    finally:
+        db.close()
+    yield
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="Lead Management API", version="0.1.0")
+    app = FastAPI(title="Lead Management API", version="0.1.0", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,
@@ -26,15 +39,6 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(leads.router)
-
-    @app.on_event("startup")
-    def on_startup() -> None:
-        Base.metadata.create_all(engine)
-        db = SessionLocal()
-        try:
-            seed_attorney(db)
-        finally:
-            db.close()
 
     @app.get("/")
     def root() -> dict[str, str]:

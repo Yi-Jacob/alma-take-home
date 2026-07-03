@@ -33,6 +33,10 @@ include = ["app*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = [
+    # Third-party notice from FastAPI's own testclient import; not actionable here.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated.*",
+]
 
 [tool.ruff]
 line-length = 100

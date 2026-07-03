@@ -47,7 +47,7 @@ async def create_lead(
         data = LeadCreate(first_name=first_name, last_name=last_name, email=email)
     except ValidationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=jsonable_encoder(exc.errors()),
         ) from exc
 
@@ -56,14 +56,14 @@ async def create_lead(
     max_bytes = get_settings().max_resume_bytes
     if resume.size is not None and resume.size > max_bytes:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"Resume exceeds the maximum allowed size ({max_bytes // (1024 * 1024)} MB)",
         )
 
     resume_bytes = await resume.read(max_bytes + 1)
     if len(resume_bytes) > max_bytes:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"Resume exceeds the maximum allowed size ({max_bytes // (1024 * 1024)} MB)",
         )
 
@@ -77,7 +77,7 @@ async def create_lead(
         )
     except InvalidResume as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
         ) from exc
 
