@@ -9,6 +9,21 @@ import { LogoutButton } from "./LogoutButton";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = { title: "Leads · Meridian" };
+
+const STATE_ORDER: Record<LeadRead["state"], number> = {
+  PENDING: 0,
+  REACHED_OUT: 1,
+};
+
+function sortLeads(leads: LeadRead[]): LeadRead[] {
+  return leads.toSorted(
+    (a, b) =>
+      STATE_ORDER[a.state] - STATE_ORDER[b.state] ||
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+}
+
 function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -44,7 +59,7 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const leads = await getLeads(token);
+  const leads = sortLeads(await getLeads(token));
   const pendingCount = leads.filter((l) => l.state === "PENDING").length;
 
   return (
@@ -150,7 +165,16 @@ export default async function DashboardPage() {
                         {lead.state === "PENDING" ? (
                           <ReachOutButton id={lead.id} />
                         ) : (
-                          <span className="text-xs text-muted">Done</span>
+                          <span className="block font-mono text-xs text-muted">
+                            {lead.reached_out_at
+                              ? `Reached out ${formatDate(lead.reached_out_at)}`
+                              : "Reached out"}
+                            {lead.reached_out_by && (
+                              <span className="block">
+                                by {lead.reached_out_by}
+                              </span>
+                            )}
+                          </span>
                         )}
                       </td>
                     </tr>

@@ -6,10 +6,36 @@ import { API_PUBLIC } from "@/lib/api";
 type FormState =
   | { status: "idle" }
   | { status: "submitting" }
-  | { status: "success" }
+  | { status: "success"; email: string }
   | { status: "error"; message: string };
 
 const ACCEPT = ".pdf,.doc,.docx";
+
+const EMAIL_PATTERN = /.+@.+\..+/;
+
+type FieldErrors = Partial<
+  Record<"first_name" | "last_name" | "email", string>
+>;
+
+function validateFields(data: FormData): FieldErrors {
+  const errors: FieldErrors = {};
+
+  if (String(data.get("first_name") ?? "").trim() === "") {
+    errors.first_name = "Please enter your first name.";
+  }
+  if (String(data.get("last_name") ?? "").trim() === "") {
+    errors.last_name = "Please enter your last name.";
+  }
+
+  const email = String(data.get("email") ?? "").trim();
+  if (email === "") {
+    errors.email = "Please enter your email address.";
+  } else if (!EMAIL_PATTERN.test(email)) {
+    errors.email = "Please enter a valid email address.";
+  }
+
+  return errors;
+}
 
 function extractError(detail: unknown): string {
   if (typeof detail === "string") return detail;
@@ -29,13 +55,28 @@ function extractError(detail: unknown): string {
 
 export function LeadForm() {
   const [state, setState] = useState<FormState>({ status: "idle" });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function clearFieldError(name: keyof FieldErrors) {
+    setFieldErrors((previous) => {
+      if (!previous[name]) return previous;
+      return { ...previous, [name]: undefined };
+    });
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+
+    const errors = validateFields(data);
+    if (Object.values(errors).some((message) => message !== undefined)) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
 
     const resume = data.get("resume");
     if (!(resume instanceof File) || resume.size === 0) {
@@ -70,7 +111,11 @@ export function LeadForm() {
         return;
       }
 
-      setState({ status: "success" });
+      setState({
+        status: "success",
+        email: String(data.get("email") ?? "").trim(),
+      });
+      setFileName(null);
     } catch {
       setState({
         status: "error",
@@ -103,10 +148,21 @@ export function LeadForm() {
           Thanks — we received your application
         </h2>
         <p className="mt-3 text-[15px] leading-relaxed text-muted">
-          One of our attorneys will review your background and reach out by
-          email with next steps. Assessments are confidential and carry no
-          obligation.
+          We&apos;ll write to you at{" "}
+          <span className="font-medium text-ink">{state.email}</span>.
         </p>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted">
+          One of our attorneys will review your background and reach out —
+          typically within 2 business days. Assessments are confidential and
+          carry no obligation.
+        </p>
+        <button
+          type="button"
+          onClick={() => setState({ status: "idle" })}
+          className="mt-5 text-sm font-medium text-pine underline underline-offset-2 hover:text-pine-600"
+        >
+          Submit another request
+        </button>
       </div>
     );
   }
@@ -132,12 +188,16 @@ export function LeadForm() {
           name="first_name"
           autoComplete="given-name"
           required
+          error={fieldErrors.first_name}
+          onEdit={() => clearFieldError("first_name")}
         />
         <Field
           label="Last name"
           name="last_name"
           autoComplete="family-name"
           required
+          error={fieldErrors.last_name}
+          onEdit={() => clearFieldError("last_name")}
         />
       </div>
 
@@ -148,6 +208,8 @@ export function LeadForm() {
           type="email"
           autoComplete="email"
           required
+          error={fieldErrors.email}
+          onEdit={() => clearFieldError("email")}
         />
       </div>
 
@@ -227,13 +289,19 @@ function Field({
   type = "text",
   required,
   autoComplete,
+  error,
+  onEdit,
 }: {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
   autoComplete?: string;
+  error?: string;
+  onEdit?: () => void;
 }) {
+  const errorId = `${name}-error`;
+
   return (
     <div>
       <label htmlFor={name} className="mb-1.5 block text-sm font-medium text-ink">
@@ -245,8 +313,16 @@ function Field({
         type={type}
         required={required}
         autoComplete={autoComplete}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
+        onChange={onEdit}
         className="w-full rounded-xl border border-sage-strong bg-paper px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-pine focus:bg-white"
       />
+      {error && (
+        <p id={errorId} className="mt-1.5 text-xs text-status-amber-fg">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
