@@ -1,5 +1,7 @@
 # Lead Management App
 
+**Demo video:** <https://cap.link/kdseg06h8g745y1>
+
 A small lead-intake system: prospects submit their name and a resume through a
 public form; a single attorney logs in to review leads and mark them as reached
 out. Every submission triggers two emails (a confirmation to the prospect and a
