@@ -55,7 +55,13 @@ def create_lead(
         state=LeadState.PENDING,
     )
     db.add(lead)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        # Don't leave an orphaned resume on disk if the lead row was never saved.
+        db.rollback()
+        storage.delete(stored.key)
+        raise
     db.refresh(lead)
 
     try:
@@ -88,7 +94,9 @@ def set_state(
     *,
     by_email: str,
 ) -> Lead:
-    lead = db.get(Lead, lead_id)
+    # Row-level lock so two concurrent PATCHes can't both pass the PENDING check
+    # (the second waits, re-reads REACHED_OUT, and gets a 409). No-op on SQLite tests.
+    lead = db.get(Lead, lead_id, with_for_update=True)
     if lead is None:
         raise LeadNotFound(f"Lead {lead_id} not found")
 

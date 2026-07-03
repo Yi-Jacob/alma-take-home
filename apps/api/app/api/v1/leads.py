@@ -5,6 +5,7 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_attorney, get_db
+from app.core.config import get_settings
 from app.models.lead import Lead
 from app.models.user import User
 from app.schemas.lead import LeadCreate, LeadRead, LeadStateUpdate
@@ -50,7 +51,21 @@ async def create_lead(
             detail=jsonable_encoder(exc.errors()),
         ) from exc
 
-    resume_bytes = await resume.read()
+    # Reject oversized uploads before reading the body into memory (this endpoint is
+    # public, so an unbounded read would be a trivial memory-exhaustion vector).
+    max_bytes = get_settings().max_resume_bytes
+    if resume.size is not None and resume.size > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Resume exceeds the maximum allowed size ({max_bytes // (1024 * 1024)} MB)",
+        )
+
+    resume_bytes = await resume.read(max_bytes + 1)
+    if len(resume_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Resume exceeds the maximum allowed size ({max_bytes // (1024 * 1024)} MB)",
+        )
 
     try:
         lead = lead_service.create_lead(
@@ -71,7 +86,12 @@ async def create_lead(
 
 @router.get("/resumes/{key}")
 def download_resume(key: str) -> FileResponse:
-    path = get_storage().path_for(key)
+    try:
+        path = get_storage().path_for(key)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found"
+        ) from exc
     if not path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
 

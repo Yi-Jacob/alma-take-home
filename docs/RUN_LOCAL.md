@@ -49,14 +49,8 @@ Runs Postgres 16 on `localhost:5433` (host port; configurable via `POSTGRES_HOST
 cd apps/api
 python -m venv .venv && source .venv/bin/activate
 pip install -e '.[dev]'        # runtime deps + pytest/httpx
-cp ../../.env.example .env      # then set DATABASE_URL host to localhost (see below)
+cp ../../.env.example .env      # shipped DATABASE_URL already targets localhost:5433
 uvicorn app.main:app --reload --port 8000
-```
-
-Because the app runs on your host now, point `DATABASE_URL` at `localhost`:
-
-```
-DATABASE_URL=postgresql+psycopg://alma:alma@localhost:5433/alma
 ```
 
 On the first request/startup the API creates its tables and seeds the attorney
@@ -68,7 +62,7 @@ Names are the UPPERCASE form of the fields in `apps/api/app/core/config.py`.
 
 | Var | Default | Notes |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+psycopg://alma:alma@localhost:5433/alma` | sync psycopg driver |
+| `DATABASE_URL` | `postgresql+psycopg://alma:alma@localhost:5432/alma` | code default; the shipped `.env.example` overrides to `localhost:5433` to match the compose db port |
 | `JWT_SECRET` | `dev-secret-change-me` | change outside local dev |
 | `JWT_ALGORITHM` | `HS256` | |
 | `ACCESS_TOKEN_TTL_MINUTES` | `480` | access-token lifetime |

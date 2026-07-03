@@ -28,4 +28,11 @@ class LocalStorageService:
         return f"{self._public_api_url}/api/v1/leads/resumes/{key}"
 
     def path_for(self, key: str) -> Path:
+        # Defense in depth: keys are server-generated UUID hex + suffix, so anything
+        # that could escape the upload dir is rejected outright.
+        if "/" in key or "\\" in key or ".." in key:
+            raise ValueError(f"Invalid storage key: {key!r}")
         return self._dir / key
+
+    def delete(self, key: str) -> None:
+        self.path_for(key).unlink(missing_ok=True)

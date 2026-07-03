@@ -28,9 +28,15 @@ services:
 
   api:
     build: ./apps/api
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     environment:
       # Uses the psycopg (v3) sync driver, matching the app's SQLAlchemy engine.
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-alma}:${POSTGRES_PASSWORD:-alma}@db:5432/${POSTGRES_DB:-alma}
@@ -55,9 +61,15 @@ services:
       - api_uploads:/data/uploads
 
   web:
-    build: ./apps/web
+    build:
+      context: ./apps/web
+      args:
+        # Baked into the client bundle at build time (NEXT_PUBLIC_* semantics).
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     environment:
       # Base URL the browser uses (client-side fetches, resume links).
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
