@@ -14,8 +14,15 @@ const ACCEPT = ".pdf,.doc,.docx";
 function extractError(detail: unknown): string {
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail) && detail.length > 0) {
-    const first = detail[0] as { msg?: string };
-    if (first?.msg) return first.msg;
+    const messages = detail
+      .map((item) => {
+        const { loc, msg } = item as { loc?: unknown[]; msg?: string };
+        if (!msg) return null;
+        const field = Array.isArray(loc) ? loc[loc.length - 1] : null;
+        return field ? `${field}: ${msg}` : msg;
+      })
+      .filter((message): message is string => message !== null);
+    if (messages.length > 0) return messages.join("; ");
   }
   return "Something went wrong. Please check your details and try again.";
 }
@@ -33,6 +40,13 @@ export function LeadForm() {
     const resume = data.get("resume");
     if (!(resume instanceof File) || resume.size === 0) {
       setState({ status: "error", message: "Attach your resume to continue." });
+      return;
+    }
+    if (resume.size > 10 * 1024 * 1024) {
+      setState({
+        status: "error",
+        message: "Resume must be 10 MB or smaller.",
+      });
       return;
     }
 
@@ -162,7 +176,7 @@ export function LeadForm() {
             <span className="truncate text-ink">
               {fileName ?? "Choose a file"}
               <span className="ml-1 block text-xs text-muted sm:inline">
-                PDF, DOC or DOCX
+                PDF, DOC or DOCX. Max 10 MB.
               </span>
             </span>
           </span>

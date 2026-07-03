@@ -1,13 +1,15 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { API_INTERNAL, ACCESS_TOKEN_COOKIE } from "@/lib/api";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 export async function markReachedOut(id: string | number): Promise<ActionResult> {
-  const token = (await cookies()).get(ACCESS_TOKEN_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   if (!token) {
     return { ok: false, error: "Your session expired. Sign in again." };
   }
@@ -27,7 +29,8 @@ export async function markReachedOut(id: string | number): Promise<ActionResult>
       return { ok: false, error: "This lead was already marked reached out." };
     }
     if (response.status === 401) {
-      return { ok: false, error: "Your session expired. Sign in again." };
+      cookieStore.delete(ACCESS_TOKEN_COOKIE);
+      redirect("/login");
     }
     return { ok: false, error: "Couldn't update this lead. Try again." };
   }
