@@ -46,6 +46,8 @@ services:
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
       # console -> both emails are logged to this container's stdout.
       EMAIL_BACKEND: ${EMAIL_BACKEND:-console}
+      # Only used when EMAIL_BACKEND=resend.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
       ATTORNEY_NOTIFY_EMAIL: ${ATTORNEY_NOTIFY_EMAIL:-attorney@example.com}
       # CHANGE THIS in any non-local environment.

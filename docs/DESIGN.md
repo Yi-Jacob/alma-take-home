@@ -63,10 +63,13 @@ directly from the browser — an acceptable and, for this app, desirable default
 
 ### Storage / email as protocols
 
-`StorageService` and `EmailService` are small Python `Protocol`s with local-disk
-and console implementations. Swapping to S3/SES is a new class plus an env var,
-not a refactor. The console email backend makes the demo runnable with zero
-external accounts.
+`StorageService` and `EmailService` are small Python `Protocol`s. Storage ships
+a local-disk implementation (S3 would be a new class plus an env var, not a
+refactor). Email ships three backends selected by `EMAIL_BACKEND`: `console`
+(default — logs both messages so the demo runs with zero external accounts),
+`resend` (real delivery through the Resend REST API via stdlib urllib, no extra
+dependency), and `smtp` (stdlib smtplib). The factory proves the protocol pays
+for itself: adding Resend touched no business logic.
 
 ### File handling
 

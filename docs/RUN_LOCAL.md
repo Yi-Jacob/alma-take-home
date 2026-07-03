@@ -68,9 +68,10 @@ Names are the UPPERCASE form of the fields in `apps/api/app/core/config.py`.
 | `ACCESS_TOKEN_TTL_MINUTES` | `480` | access-token lifetime |
 | `ATTORNEY_EMAIL` | `attorney@example.com` | seeded login |
 | `ATTORNEY_PASSWORD` | `password123` | seeded login |
-| `EMAIL_BACKEND` | `console` | `console` logs to stdout; `smtp` uses `SMTP_*` |
+| `EMAIL_BACKEND` | `console` | `console` logs to stdout; `resend` sends via the Resend API (needs `RESEND_API_KEY`); `smtp` uses `SMTP_*` |
 | `EMAIL_FROM` | `no-reply@example.com` | sender address |
 | `ATTORNEY_NOTIFY_EMAIL` | `attorney@example.com` | recipient of new-lead notifications |
+| `RESEND_API_KEY` | — | only when `EMAIL_BACKEND=resend` |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_USE_TLS` | `localhost` / `1025` / — / — / `false` | only when `EMAIL_BACKEND=smtp` |
 | `STORAGE_BACKEND` | `local` | local-disk backend |
 | `UPLOAD_DIR` | `uploads` | where resumes are written |

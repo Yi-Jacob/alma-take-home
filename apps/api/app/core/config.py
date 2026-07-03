@@ -22,8 +22,9 @@ class Settings(BaseSettings):
     attorney_password: str = "password123"
 
     # Email
-    email_backend: Literal["console", "smtp"] = "console"
+    email_backend: Literal["console", "smtp", "resend"] = "console"
     email_from: str = "no-reply@example.com"
+    resend_api_key: str | None = None
     attorney_notify_email: str = "attorney@example.com"
     smtp_host: str = "localhost"
     smtp_port: int = 1025
