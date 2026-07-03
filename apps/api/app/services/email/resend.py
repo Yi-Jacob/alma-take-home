@@ -33,6 +33,8 @@ class ResendEmailService:
             headers={
                 "Authorization": f"Bearer {self._api_key}",
                 "Content-Type": "application/json",
+                # Resend (Cloudflare) rejects urllib's default Python-urllib UA with 403.
+                "User-Agent": "alma-lead-api/1.0",
             },
             method="POST",
         )
